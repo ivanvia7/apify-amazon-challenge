@@ -1,0 +1,32 @@
+import { Input } from "./types.js";
+import { FailedRequestInfo } from "./types.js";
+import { Actor } from "apify";
+
+export function checkInput(input: Input) {
+    if (!input || !input.keyword || typeof input.keyword !== "string") {
+        console.error("Please define the correct keyword as a string");
+    }
+}
+
+export const failedRequestHandler = async (context: any): Promise<void> => {
+    const { request, error, log } = context;
+
+    log.error(
+        `Request ${request.url} failed after ${request.retryCount + 1} attempts: ${error.message}`,
+    );
+
+    const failedRequestInfo: FailedRequestInfo = {
+        url: request.url,
+        uniqueKey: request.uniqueKey,
+        retryCount: request.retryCount,
+        errorMessage: error.message,
+        failedAt: new Date().toISOString(),
+    };
+
+    await Actor.pushData(failedRequestInfo);
+};
+
+export const createOffersUrl = (asin: string): string => {
+    const offersUrl = `https://www.amazon.com/gp/product/ajax/ref=dp_aod_ALL_mbc?asin=${asin}&m=&qid=1746454175&smid=&sourcecustomerorglistid=&sourcecustomerorglistitemid=&sr=8-54&pc=dp&experienceId=aodAjaxMain`;
+    return offersUrl;
+};
