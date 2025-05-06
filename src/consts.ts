@@ -10,12 +10,14 @@ export const labels = {
 export const SELECTORS = {
     productTitleSelector: "#productTitle",
     productDescriptionSelector: "#productDescription",
-    offerSelector: ".a-price.a-text-price span",
-    sellerSelector:
-        'div[data-csa-c-content-id="desktop-merchant-info"][data-csa-c-slot-id="odf-feature-text-desktop-merchant-info"] span',
+    offerPriceSelector:
+        'span[id^="aod-price-"] span.a-price[data-a-color="base"] span[aria-hidden="true"]',
+    sellerSelector: 'div[id*="soldBy"] a[aria-label]',
     asinSelector: 'div[data-csa-c-asin]:not([data-csa-c-asin=""])',
     lastPaginationSelector:
         '.s-pagination-item.s-pagination-disabled:not([class*="s-pagination-previous"])',
     productLinksElementsSelector: 'div[data-cy="title-recipe"] > a',
     searchBorderSelector: ".rhf-border",
+    offerNodeSelector:
+        "#aod-pinned-offer, #aod-offer-list > div.aod-other-offer-block",
 };

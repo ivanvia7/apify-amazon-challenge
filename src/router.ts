@@ -6,7 +6,6 @@ import { createOffersUrl } from "./utils.js";
 export const router = createCheerioRouter();
 
 router.addHandler(labels.START, async ({ $, crawler, request, log }) => {
-    console.log("REQUEST URL IS HERE", request.url);
     const { data } = request.userData;
     const lastPaginationNumber = Number(
         $(SELECTORS.lastPaginationSelector).text().trim(),
@@ -19,7 +18,7 @@ router.addHandler(labels.START, async ({ $, crawler, request, log }) => {
 
         await crawler.addRequests([
             {
-                url: request.url,
+                url: `${BASE_SEARCH_URL}${request.userData.data.keyword}&page=1`,
                 label: labels.LISTING,
                 userData: {
                     data: {
@@ -28,6 +27,7 @@ router.addHandler(labels.START, async ({ $, crawler, request, log }) => {
                 },
             },
         ]);
+        return;
     }
 
     //iterate through all available listing pages and add all of them to the queue
@@ -126,19 +126,23 @@ router.addHandler(labels.DETAIL, async ({ $, crawler, request, log }) => {
 router.addHandler(labels.OFFER, async ({ $, request }) => {
     const { data } = request.userData;
 
-    for (const offer of $("#aod-offer")) {
+    for (const offer of $(SELECTORS.offerNodeSelector)) {
         const element = $(offer);
+
+        const sellerNameText = element
+            .find(SELECTORS.sellerSelector)
+            .text()
+            .trim();
+
+        const offerPriceText = element
+            .find(SELECTORS.offerPriceSelector)
+            .text()
+            .trim();
 
         await Dataset.pushData({
             ...data,
-            sellerName: element
-                .find('div[id*="soldBy"] a[aria-label]')
-                .text()
-                .trim(),
-            offer: element
-                .find(".a-price.a-text-price span[aria-hidden='true']")
-                .text()
-                .trim(),
+            sellerName: sellerNameText,
+            offer: offerPriceText,
         });
     }
 });
