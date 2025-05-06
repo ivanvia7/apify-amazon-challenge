@@ -5,7 +5,7 @@ import { router } from "./router.js";
 
 import { Actor } from "apify";
 import { checkInput } from "./utils.js";
-import { BASE_SEARCH_URL, LABELS } from "./consts.js";
+import { BASE_SEARCH_URL, labels } from "./consts.js";
 import { failedRequestHandler } from "./utils.js";
 
 // The init() call configures the Actor for its environment. It's recommended to start every Actor with an init().
@@ -33,8 +33,10 @@ const crawler = new CheerioCrawler({
 const startRequest = {
     url: startUrl,
     userData: {
-        label: LABELS.start,
-        keyword,
+        label: labels.START,
+        data: {
+            keyword,
+        },
     },
     failedRequestHandler,
 };

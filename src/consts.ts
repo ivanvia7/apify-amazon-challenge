@@ -1,10 +1,10 @@
 export const BASE_URL = "https://www.amazon.com";
 export const BASE_SEARCH_URL = `https://www.amazon.com/s?k=`;
-export const LABELS = {
-    start: "START",
-    search: "SEARCH",
-    detail: "DETAIL",
-    offer: "OFFER",
+export const labels = {
+    START: "START",
+    LISTING: "LISTING",
+    DETAIL: "DETAIL",
+    OFFER: "OFFER",
 };
 
 export const SELECTORS = {

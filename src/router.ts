@@ -1,17 +1,19 @@
 import { createCheerioRouter, RequestOptions, Dataset } from "crawlee";
-import { LABELS } from "./consts.js";
+import { labels } from "./consts.js";
 import { BASE_URL, BASE_SEARCH_URL, SELECTORS } from "./consts.js";
+import { createOffersUrl } from "./utils.js";
 
 export const router = createCheerioRouter();
 
-router.addHandler(LABELS.start, async ({ $, crawler, request, log }) => {
-    log.info("Beginning processing Start handler.");
+router.addHandler(labels.START, async ({ $, crawler, request, log }) => {
+    const { data } = request.userData;
+    console.log(`user data form the request inside start handler: ${data}`);
+    //Find the last pagination integer
+    const lastPaginationNumber = Number(
+        $(SELECTORS.lastPaginationSelector).text().trim(),
+    );
 
-    const lastPaginationString = $(SELECTORS.lastPaginationSelector)
-        .text()
-        .trim();
-
-    if (!lastPaginationString) {
+    if (!lastPaginationNumber) {
         log.warning(
             "Cannot find the last pagination element on the page. Passing only startUrl to the next page",
         );
@@ -19,135 +21,126 @@ router.addHandler(LABELS.start, async ({ $, crawler, request, log }) => {
         await crawler.addRequests([
             {
                 url: request.url,
-                label: LABELS.search,
+                label: labels.LISTING,
                 userData: {
-                    keyword: request.userData.keyword,
+                    data: {
+                        ...data,
+                    },
                 },
             },
         ]);
     }
 
-    const lastPaginationNumber = Number(lastPaginationString);
-
-    log.info(
-        `Found that the input keyword '${request.userData.keyword}' has ${lastPaginationNumber} pages`,
-    );
-
+    //iterate through all available listing pages and add all of them to the queue
     for (let pageNum = 1; pageNum <= lastPaginationNumber; pageNum++) {
-        try {
-            const url = `${BASE_SEARCH_URL}${request.userData.keyword}&page=${pageNum}`;
+        const url = `${BASE_SEARCH_URL}${request.userData.keyword}&page=${pageNum}`;
 
-            await crawler.addRequests([
-                {
-                    url,
-                    label: LABELS.search,
-                    userData: {
-                        keyword: request.userData.keyword,
+        await crawler.addRequests([
+            {
+                url,
+                label: labels.LISTING,
+                userData: {
+                    data: {
+                        ...data,
                     },
                 },
-            ]);
-        } catch (e) {
-            log.error(
-                "Failed to construct URL for page ${i} from base ${request.url}",
-                e!,
-            );
-        }
+            },
+        ]);
     }
 });
 
-router.addHandler(
-    LABELS.search,
-    async ({ $, waitForSelector, crawler, request, log }) => {
-        log.info(`Extracting product links from search page: ${request.url}`);
+router.addHandler(labels.LISTING, async ({ $, crawler, request, log }) => {
+    // log.info(`Initiating listing handler for list ${request.url}`);
 
-        await waitForSelector(SELECTORS.searchBorderSelector);
+    const { data } = request.userData;
+    log.info(`user data form the request inside listing handler: ${data}`);
 
-        const productLinkElements = $(SELECTORS.productLinksElementsSelector);
+    //extract the link of each product
+    const productLinkElements = $(SELECTORS.productLinksElementsSelector);
 
-        if (productLinkElements.length === 0) {
+    if (productLinkElements.length === 0) {
+        log.warning(
+            `Cannot find any product links using selector on: ${request.url}`,
+        );
+        return;
+    }
+
+    productLinkElements.toArray().forEach((el, index) => {
+        const $element = $(el);
+        const href = $element.attr("href");
+
+        if (!href) {
             log.warning(
-                `Cannot find any product links using selector on: ${request.url}`,
+                `Found a link element without href at index ${index} on ${request.url}`,
             );
             return;
         }
 
-        const requestsToAdd: RequestOptions[] = [];
+        const productPageUrl = new URL(
+            href,
+            request.loadedUrl ?? request.url,
+        ).toString();
 
-        productLinkElements.each((index, el) => {
-            const $element = $(el);
-            const relativeOrAbsoluteUrl = $element.attr("href");
+        crawler.addRequests([
+            {
+                url: productPageUrl,
+                label: labels.DETAIL,
+                userData: {
+                    data: { ...data },
+                },
+            },
+        ]);
+    });
+});
 
-            if (!relativeOrAbsoluteUrl) {
-                log.warning(
-                    `Found a link element without an href attribute at index ${index} on ${request.url}`,
-                );
-                return;
-            }
+router.addHandler(labels.DETAIL, async ({ $, crawler, request, log }) => {
+    const { data } = request.userData;
 
-            try {
-                const productPageUrl = new URL(
-                    relativeOrAbsoluteUrl,
-                    request.loadedUrl ?? request.url,
-                ).toString();
+    log.info(`user data form the request inside detail handler: ${data}`);
 
-                const newRequest: RequestOptions = {
-                    url: productPageUrl,
-                    label: LABELS.detail,
-                    userData: {
-                        ...request.userData,
-                        sourcePage: request.url,
-                    },
-                };
+    //extract the basic info about this product
+    const productTitle =
+        $(SELECTORS.productTitleSelector)?.text().trim() || "undefined";
+    const productDescription =
+        $(SELECTORS.productDescriptionSelector)?.text().trim() || "undefined";
 
-                requestsToAdd.push(newRequest);
-            } catch (e: any) {
-                log.error(
-                    `Failed to construct URL or create request object for href "${relativeOrAbsoluteUrl}" on page ${request.url}: ${e.message}`,
-                    { error: e },
-                );
-            }
-        });
+    const asin = $(SELECTORS.asinSelector).first().attr("data-csa-c-asin");
 
-        if (requestsToAdd.length > 0) {
-            log.info(`Adding ${requestsToAdd.length} product detail requests.`);
-            await crawler.addRequests(requestsToAdd);
-        } else {
-            log.info(
-                `No valid product links found or processed on ${request.url}`,
-            );
-        }
-    },
-);
+    const offerUrl = createOffersUrl(asin!);
 
-router.addHandler(
-    LABELS.detail,
-    async ({ $, waitForSelector, request, log }) => {
-        await waitForSelector(SELECTORS.productTitleSelector);
+    // log.info(`Scraped initial details for product ${productTitle}`);
 
-        const productTitle =
-            $(SELECTORS.productTitleSelector)?.text().trim() || "undefined";
-        const productDescription =
-            $(SELECTORS.productDescriptionSelector)?.text().trim() ||
-            "undefined";
-        const offer =
-            $(SELECTORS.offerSelector)?.first().text().trim() || "undefined";
-        const seller =
-            $(SELECTORS.sellerSelector).first().text().trim() || "undefined";
+    crawler.addRequests([
+        {
+            url: offerUrl,
+            label: labels.OFFER,
+            userData: {
+                data: {
+                    ...data,
+                    productTitle,
+                    productDescription,
+                    asin,
+                    productUrl: request.url,
+                },
+            },
+        },
+    ]);
+});
 
-        const asin = $(SELECTORS.asinSelector).first().attr("data-csa-c-asin");
+router.addHandler(labels.OFFER, async ({ $, request, log }) => {
+    const { data } = request.userData;
+    log.info(`user data form the request inside offers handler: ${data}`);
 
-        log.info(
-            `Extracting the details form the product page: ${productTitle}`,
-        );
+    for (const offer of $("#aod-offer")) {
+        const element = $(offer);
 
         await Dataset.pushData({
-            title: productTitle,
-            itemUrl: request.url,
-            asin,
-            description: productDescription,
-            keyword: request.userData.keyword,
-            seller_name: seller,
-            offer,
+            ...data,
+            sellerName: element
+                .find('div[id*="soldBy"] a[aria-label]')
+                .text()
+                .trim(),
+            offer: element.find(".a-price .a-offscreen").text().trim(),
         });
-    },
-);
+    }
+});
