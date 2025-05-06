@@ -6,9 +6,8 @@ import { createOffersUrl } from "./utils.js";
 export const router = createCheerioRouter();
 
 router.addHandler(labels.START, async ({ $, crawler, request, log }) => {
+    console.log("REQUEST URL IS HERE", request.url);
     const { data } = request.userData;
-    console.log(`user data form the request inside start handler: ${data}`);
-    //Find the last pagination integer
     const lastPaginationNumber = Number(
         $(SELECTORS.lastPaginationSelector).text().trim(),
     );
@@ -33,7 +32,7 @@ router.addHandler(labels.START, async ({ $, crawler, request, log }) => {
 
     //iterate through all available listing pages and add all of them to the queue
     for (let pageNum = 1; pageNum <= lastPaginationNumber; pageNum++) {
-        const url = `${BASE_SEARCH_URL}${request.userData.keyword}&page=${pageNum}`;
+        const url = `${BASE_SEARCH_URL}${request.userData.data.keyword}&page=${pageNum}`;
 
         await crawler.addRequests([
             {
@@ -50,10 +49,9 @@ router.addHandler(labels.START, async ({ $, crawler, request, log }) => {
 });
 
 router.addHandler(labels.LISTING, async ({ $, crawler, request, log }) => {
-    // log.info(`Initiating listing handler for list ${request.url}`);
+    log.info(`Initiating listing handler for list ${request.url}`);
 
     const { data } = request.userData;
-    log.info(`user data form the request inside listing handler: ${data}`);
 
     //extract the link of each product
     const productLinkElements = $(SELECTORS.productLinksElementsSelector);
@@ -96,8 +94,6 @@ router.addHandler(labels.LISTING, async ({ $, crawler, request, log }) => {
 router.addHandler(labels.DETAIL, async ({ $, crawler, request, log }) => {
     const { data } = request.userData;
 
-    log.info(`user data form the request inside detail handler: ${data}`);
-
     //extract the basic info about this product
     const productTitle =
         $(SELECTORS.productTitleSelector)?.text().trim() || "undefined";
@@ -108,7 +104,7 @@ router.addHandler(labels.DETAIL, async ({ $, crawler, request, log }) => {
 
     const offerUrl = createOffersUrl(asin!);
 
-    // log.info(`Scraped initial details for product ${productTitle}`);
+    log.info(`Scraped initial details for product ${productTitle}`);
 
     crawler.addRequests([
         {
@@ -127,9 +123,8 @@ router.addHandler(labels.DETAIL, async ({ $, crawler, request, log }) => {
     ]);
 });
 
-router.addHandler(labels.OFFER, async ({ $, request, log }) => {
+router.addHandler(labels.OFFER, async ({ $, request }) => {
     const { data } = request.userData;
-    log.info(`user data form the request inside offers handler: ${data}`);
 
     for (const offer of $("#aod-offer")) {
         const element = $(offer);
@@ -140,7 +135,10 @@ router.addHandler(labels.OFFER, async ({ $, request, log }) => {
                 .find('div[id*="soldBy"] a[aria-label]')
                 .text()
                 .trim(),
-            offer: element.find(".a-price .a-offscreen").text().trim(),
+            offer: element
+                .find(".a-price.a-text-price span[aria-hidden='true']")
+                .text()
+                .trim(),
         });
     }
 });

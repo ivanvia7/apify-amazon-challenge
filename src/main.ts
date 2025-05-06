@@ -17,6 +17,8 @@ if (!input) throw new Error("Input is missing!");
 checkInput(input);
 const { keyword } = input;
 
+console.log("KEYWORD IS HERE", keyword);
+
 //proxy config
 const proxyConfiguration = await Actor.createProxyConfiguration({
     groups: ["RESIDENTIAL"],
