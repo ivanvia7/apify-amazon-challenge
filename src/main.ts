@@ -39,6 +39,8 @@ const startRequest = {
         },
     },
     failedRequestHandler,
+    requestHandlerTimeoutSecs: 60,
+    navigationTimeoutSecs: 60,
 };
 
 await crawler.run([startRequest]);

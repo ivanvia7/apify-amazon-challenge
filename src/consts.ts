@@ -11,13 +11,13 @@ export const SELECTORS = {
     productTitleSelector: "#productTitle",
     productDescriptionSelector: "#productDescription",
     offerPriceSelector:
-        'span[id^="aod-price-"] span.a-price[data-a-color="base"] span[aria-hidden="true"]',
-    sellerSelector: 'div[id*="soldBy"] a[aria-label]',
+        'span[id^="aod-price-"] div.aok-align-center > span.a-price',
+    //aok-offscreen
+    sellerSelector: "div#aod-offer-soldBy a.a-link-normal",
     asinSelector: 'div[data-csa-c-asin]:not([data-csa-c-asin=""])',
     lastPaginationSelector:
         '.s-pagination-item.s-pagination-disabled:not([class*="s-pagination-previous"])',
     productLinksElementsSelector: 'div[data-cy="title-recipe"] > a',
     searchBorderSelector: ".rhf-border",
-    offerNodeSelector:
-        "#aod-pinned-offer, #aod-offer-list > div.aod-other-offer-block",
+    offerNodeSelector: "#aod-offer",
 };

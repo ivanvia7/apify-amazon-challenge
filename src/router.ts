@@ -126,16 +126,18 @@ router.addHandler(labels.DETAIL, async ({ $, crawler, request, log }) => {
 router.addHandler(labels.OFFER, async ({ $, request }) => {
     const { data } = request.userData;
 
-    for (const offer of $(SELECTORS.offerNodeSelector)) {
-        const element = $(offer);
+    for (const offerNode of $(SELECTORS.offerNodeSelector)) {
+        const element = $(offerNode);
 
         const sellerNameText = element
             .find(SELECTORS.sellerSelector)
+            .first()
             .text()
             .trim();
 
         const offerPriceText = element
             .find(SELECTORS.offerPriceSelector)
+            .first()
             .text()
             .trim();
 
