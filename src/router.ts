@@ -49,48 +49,67 @@ router.addHandler(labels.START, async ({ $, crawler, request, log }) => {
     }
 });
 
-router.addHandler(labels.LISTING, async ({ $, crawler, request, log }) => {
-    log.info(`Initiating listing handler for list ${request.url}`);
+router.addHandler(
+    labels.LISTING,
+    async ({ $, crawler, session, request, log }) => {
+        log.info(`Initiating listing handler for list ${request.url}`);
 
-    const { data } = request.userData;
+        const { data } = request.userData;
 
-    //extract the link of each product
-    const productLinkElements = $(SELECTORS.productLinksElementsSelector);
+        //extract the link of each product
+        const productLinkElements = $(SELECTORS.productLinksElementsSelector);
 
-    if (productLinkElements.length === 0) {
-        log.warning(
-            `Cannot find any product links using selector on: ${request.url}`,
-        );
-        return;
-    }
-
-    productLinkElements.toArray().forEach((el, index) => {
-        const $element = $(el);
-        const href = $element.attr("href");
-
-        if (!href) {
+        if (productLinkElements.length === 0) {
             log.warning(
-                `Found a link element without href at index ${index} on ${request.url}`,
+                `Cannot find any product links using selector on: ${request.url}`,
             );
+            session?.markBad();
+
+            if (request.retryCount < 3) {
+                log.info(
+                    `Retrying request for ${request.url} (attempt ${request.retryCount + 1})`,
+                );
+                await crawler.addRequests([
+                    {
+                        ...request,
+                        retryCount: request.retryCount + 1,
+                    },
+                ]);
+            } else {
+                log.error(`Max retry attempts reached for ${request.url}`);
+                session?.markBad();
+            }
             return;
         }
 
-        const productPageUrl = new URL(
-            href,
-            request.loadedUrl ?? request.url,
-        ).toString();
+        productLinkElements.toArray().forEach((el, index) => {
+            const $element = $(el);
+            const href = $element.attr("href");
 
-        crawler.addRequests([
-            {
-                url: productPageUrl,
-                label: labels.DETAIL,
-                userData: {
-                    data: { ...data },
+            if (!href) {
+                log.warning(
+                    `Found a link element without href at index ${index} on ${request.url}`,
+                );
+                return;
+            }
+
+            const productPageUrl = new URL(
+                href,
+                request.loadedUrl ?? request.url,
+            ).toString();
+
+            crawler.addRequests([
+                {
+                    url: productPageUrl,
+                    label: labels.DETAIL,
+                    userData: {
+                        data: { ...data },
+                    },
                 },
-            },
-        ]);
-    });
-});
+            ]);
+        });
+    },
+);
 
 router.addHandler(labels.DETAIL, async ({ $, crawler, request, log }) => {
     const { data } = request.userData;

@@ -40,6 +40,11 @@ const proxyConfiguration = await Actor.createProxyConfiguration({
 const crawler = new CheerioCrawler({
     requestHandler: router,
     proxyConfiguration,
+    useSessionPool: true,
+    sessionPoolOptions: {
+        maxPoolSize: 100,
+        sessionOptions: { maxUsageCount: 5 },
+    },
 });
 
 const startRequest = {
