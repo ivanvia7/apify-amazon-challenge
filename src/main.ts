@@ -1,21 +1,35 @@
-// Axios - Promise based HTTP client for the browser and node.js (Read more at https://axios-http.com/docs/intro).
 import { Input } from "./types.js";
 import { CheerioCrawler, Router, Request } from "crawlee";
 import { router } from "./router.js";
-
-import { Actor } from "apify";
+import { Actor, log } from "apify";
 import { checkInput } from "./utils.js";
 import { BASE_SEARCH_URL, labels } from "./consts.js";
-import { failedRequestHandler } from "./utils.js";
+import {
+    failedRequestHandler,
+    trackOffersPerAsin,
+    logEvery10Seconds,
+} from "./utils.js";
+import { setAsinTracker, getAsinTracker } from "./asinTracker.js";
 
-// The init() call configures the Actor for its environment. It's recommended to start every Actor with an init().
 await Actor.init();
 
-// Structure of input is defined in input_schema.json
 const input = await Actor.getInput<Input>();
 if (!input) throw new Error("Input is missing!");
 checkInput(input);
 const { keyword } = input;
+
+//check for the previos state
+const myAsinTrackerState = (await Actor.getValue("asin-tracker-state")) || {};
+setAsinTracker(myAsinTrackerState);
+
+//initialize the loggin of the asinTracker
+logEvery10Seconds(getAsinTracker());
+
+//setup the listener for a new state
+Actor.on("migrating", async () => {
+    Actor.setValue("asin-tracker-state", getAsinTracker());
+    await Actor.reboot();
+});
 
 //proxy config
 const proxyConfiguration = await Actor.createProxyConfiguration({
@@ -23,15 +37,13 @@ const proxyConfiguration = await Actor.createProxyConfiguration({
     countryCode: "US",
 });
 
-const startUrl = `${BASE_SEARCH_URL}${keyword}`;
-
 const crawler = new CheerioCrawler({
     requestHandler: router,
     proxyConfiguration,
 });
 
 const startRequest = {
-    url: startUrl,
+    url: `${BASE_SEARCH_URL}${keyword}`,
     userData: {
         label: labels.START,
         data: {
@@ -44,5 +56,7 @@ const startRequest = {
 };
 
 await crawler.run([startRequest]);
+
+log.info(`✅ Last asinTracker state:${getAsinTracker()}`);
 
 await Actor.exit();

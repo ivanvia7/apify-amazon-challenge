@@ -12,7 +12,6 @@ export const SELECTORS = {
     productDescriptionSelector: "#productDescription",
     offerPriceSelector:
         'span[id^="aod-price-"] div.aok-align-center > span.a-price',
-    //aok-offscreen
     sellerSelector: "div#aod-offer-soldBy a.a-link-normal",
     asinSelector: 'div[data-csa-c-asin]:not([data-csa-c-asin=""])',
     lastPaginationSelector:

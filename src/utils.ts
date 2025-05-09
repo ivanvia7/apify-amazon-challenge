@@ -1,10 +1,12 @@
 import { Input } from "./types.js";
 import { FailedRequestInfo } from "./types.js";
-import { Actor } from "apify";
+import { Actor, log } from "apify";
+import { getAsinTracker } from "./asinTracker.js";
 
 export function checkInput(input: Input) {
     if (!input || !input.keyword || typeof input.keyword !== "string") {
         console.error("Please define the correct keyword as a string");
+        Actor.fail("Please define the correct keyword as a string");
     }
 }
 
@@ -30,3 +32,22 @@ export const createOffersUrl = (asin: string): string => {
     const offersUrl = `https://www.amazon.com/gp/product/ajax/ref=dp_aod_ALL_mbc?asin=${asin}&m=&qid=1746454175&smid=&sourcecustomerorglistid=&sourcecustomerorglistitemid=&sr=8-54&pc=dp&experienceId=aodAjaxMain`;
     return offersUrl;
 };
+
+export const trackOffersPerAsin = (asin: string) => {
+    const tracker = getAsinTracker();
+
+    if (tracker.hasOwnProperty(asin)) {
+        tracker[asin] = tracker[asin] + 1;
+    } else {
+        tracker[asin] = 1;
+    }
+
+    return tracker;
+};
+
+export async function logEvery10Seconds(object: Record<string, number> | {}) {
+    while (true) {
+        log.info(`✍️ Logging state:${JSON.stringify(object, null, 2)}`);
+        await new Promise((resolve) => setTimeout(resolve, 10_000));
+    }
+}

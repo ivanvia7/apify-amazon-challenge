@@ -2,6 +2,7 @@ import { createCheerioRouter, RequestOptions, Dataset } from "crawlee";
 import { labels } from "./consts.js";
 import { BASE_URL, BASE_SEARCH_URL, SELECTORS } from "./consts.js";
 import { createOffersUrl } from "./utils.js";
+import { trackOffersPerAsin } from "./utils.js";
 
 export const router = createCheerioRouter();
 
@@ -128,6 +129,9 @@ router.addHandler(labels.OFFER, async ({ $, request }) => {
 
     for (const offerNode of $(SELECTORS.offerNodeSelector)) {
         const element = $(offerNode);
+
+        //track this offer to the asin
+        trackOffersPerAsin(data.asin);
 
         const sellerNameText = element
             .find(SELECTORS.sellerSelector)
