@@ -2,12 +2,8 @@ import { Input } from "./types.js";
 import { FailedRequestInfo } from "./types.js";
 import { Actor, log } from "apify";
 import { getAsinTracker } from "./asinTracker.js";
-import {
-    CheerioCrawler,
-    CheerioRequestHandler,
-    Session,
-    Request,
-} from "crawlee";
+import { CheerioCrawler, Session, Request } from "crawlee";
+import { getStatsTracker } from "./statsTracker.js";
 
 export function checkInput(input: Input) {
     if (!input || !input.keyword || typeof input.keyword !== "string") {
@@ -69,7 +65,11 @@ export async function retryRequestManually(
         );
         await crawler.addRequests([
             {
-                ...request,
+                url: request.url,
+                method: request.method,
+                headers: request.headers,
+                payload: request.payload,
+                userData: { ...request.userData },
                 retryCount: request.retryCount + 1,
             },
         ]);
@@ -78,3 +78,18 @@ export async function retryRequestManually(
         session?.markBad();
     }
 }
+
+export const trackErrorsPerRequest = (request: Request, error: string) => {
+    const stats = getStatsTracker();
+    const url = request.url;
+
+    if (!stats.errors[url]) {
+        stats.errors[url] = [];
+    }
+
+    stats.errors[url].push(error);
+
+    stats.totalSaved++;
+
+    return stats;
+};

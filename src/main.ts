@@ -6,10 +6,12 @@ import { checkInput } from "./utils.js";
 import { BASE_SEARCH_URL, labels } from "./consts.js";
 import {
     failedRequestHandler,
-    trackOffersPerAsin,
     logEvery10Seconds,
+    trackErrorsPerRequest,
 } from "./utils.js";
 import { setAsinTracker, getAsinTracker } from "./asinTracker.js";
+import { getStatsTracker, setStatsTracker } from "./statsTracker.js";
+import { StatsTracker } from "./types.js";
 
 await Actor.init();
 
@@ -18,12 +20,17 @@ if (!input) throw new Error("Input is missing!");
 checkInput(input);
 const { keyword } = input;
 
-//check for the previos state
+//check for the previous state for AsinTracker
 const myAsinTrackerState = (await Actor.getValue("asin-tracker-state")) || {};
 setAsinTracker(myAsinTrackerState);
 
-//initialize the loggin of the asinTracker
-logEvery10Seconds(getAsinTracker());
+//check for the previous state for statsTracker
+const myStatsTrackerState =
+    ((await Actor.getValue("STATS")) as StatsTracker) || getStatsTracker();
+setStatsTracker(myStatsTrackerState);
+
+//initialize the logging of the asinTracker
+logEvery10Seconds(getStatsTracker());
 
 //setup the listener for a new state
 Actor.on("migrating", async () => {
@@ -44,6 +51,16 @@ const crawler = new CheerioCrawler({
     sessionPoolOptions: {
         maxPoolSize: 100,
         sessionOptions: { maxUsageCount: 5 },
+    },
+    async errorHandler({ request, error }) {
+        const message = error instanceof Error ? error.message : String(error);
+        const cleanMessage = message
+            .replace(/\n/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        trackErrorsPerRequest(request, cleanMessage);
+        // console.error(`Error occurred on ${request.url}:`, error);
     },
 });
 

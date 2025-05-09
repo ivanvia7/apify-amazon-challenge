@@ -130,7 +130,7 @@ router.addHandler(labels.DETAIL, async ({ $, crawler, request, log }) => {
     ]);
 });
 
-router.addHandler(labels.OFFER, async ({ $, request }) => {
+router.addHandler(labels.OFFER, async ({ $, request, crawler }) => {
     const { data } = request.userData;
 
     for (const offerNode of $(SELECTORS.offerNodeSelector)) {
@@ -155,6 +155,10 @@ router.addHandler(labels.OFFER, async ({ $, request }) => {
             ...data,
             sellerName: sellerNameText,
             offer: offerPriceText,
+            dateHandled: request.handledAt,
+            numberOfRetries: request.retryCount,
+            currentPendingRequests: (await crawler.requestQueue?.getInfo())!
+                .pendingRequestCount,
         });
     }
 });

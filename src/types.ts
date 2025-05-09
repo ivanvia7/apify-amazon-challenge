@@ -21,3 +21,10 @@ export interface FailedRequestInfo {
     errorMessage: string;
     failedAt: string;
 }
+
+export interface StatsTracker {
+    errors: Record<string, string[]>;
+    totalSaved: number;
+}
+
+export type Errors = string[];

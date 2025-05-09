@@ -1,5 +1,3 @@
-import { log } from "crawlee";
-
 let asinTracker: Record<string, any> = {};
 
 export function getAsinTracker() {
