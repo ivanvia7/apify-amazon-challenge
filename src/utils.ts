@@ -2,6 +2,12 @@ import { Input } from "./types.js";
 import { FailedRequestInfo } from "./types.js";
 import { Actor, log } from "apify";
 import { getAsinTracker } from "./asinTracker.js";
+import {
+    CheerioCrawler,
+    CheerioRequestHandler,
+    Session,
+    Request,
+} from "crawlee";
 
 export function checkInput(input: Input) {
     if (!input || !input.keyword || typeof input.keyword !== "string") {
@@ -49,5 +55,26 @@ export async function logEvery10Seconds(object: Record<string, number> | {}) {
     while (true) {
         log.info(`✍️ Logging state:${JSON.stringify(object, null, 2)}`);
         await new Promise((resolve) => setTimeout(resolve, 10_000));
+    }
+}
+
+export async function retryRequestManually(
+    crawler: CheerioCrawler,
+    request: Request,
+    session: Session | undefined,
+) {
+    if (request.retryCount < 3) {
+        log.info(
+            `Retrying request for ${request.url} (attempt ${request.retryCount + 1})`,
+        );
+        await crawler.addRequests([
+            {
+                ...request,
+                retryCount: request.retryCount + 1,
+            },
+        ]);
+    } else {
+        log.error(`Max retry attempts reached for ${request.url}`);
+        session?.markBad();
     }
 }

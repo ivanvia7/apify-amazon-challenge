@@ -1,7 +1,7 @@
 import { createCheerioRouter, RequestOptions, Dataset } from "crawlee";
 import { labels } from "./consts.js";
 import { BASE_URL, BASE_SEARCH_URL, SELECTORS } from "./consts.js";
-import { createOffersUrl } from "./utils.js";
+import { createOffersUrl, retryRequestManually } from "./utils.js";
 import { trackOffersPerAsin } from "./utils.js";
 
 export const router = createCheerioRouter();
@@ -63,22 +63,9 @@ router.addHandler(
             log.warning(
                 `Cannot find any product links using selector on: ${request.url}`,
             );
-            session?.markBad();
 
-            if (request.retryCount < 3) {
-                log.info(
-                    `Retrying request for ${request.url} (attempt ${request.retryCount + 1})`,
-                );
-                await crawler.addRequests([
-                    {
-                        ...request,
-                        retryCount: request.retryCount + 1,
-                    },
-                ]);
-            } else {
-                log.error(`Max retry attempts reached for ${request.url}`);
-                session?.markBad();
-            }
+            await retryRequestManually(crawler, request, session);
+
             return;
         }
 
